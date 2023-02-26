@@ -6,8 +6,9 @@ function App() {
 
   useEffect(() => {
 
-    //initialize WebSocket connection to NGINX server, load balancing based on least connection
-    const ws = new WebSocket("ws://localhost:81");
+    //initialize WebSocket connection
+    //PORT 8800 for the NodeJS server, PORT 80 for the NGINX reverse proxy server
+    const ws = new WebSocket("ws://localhost:8800");
     ws.onerror = () => console.error;
     ws.onopen = () => console.log("WebSocket connection established!");
     

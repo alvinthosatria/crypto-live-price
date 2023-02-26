@@ -36,8 +36,9 @@ const requestOptions = {
   }
 };
 
-// Create a new cache object with a  10 seconds expiration time
-const cache = new NodeCache({ stdTTL: 10 })
+// Create a new cache object with a  19 seconds expiration time because
+// data from CoinCap API is updated every 20 seconds
+const cache = new NodeCache({ stdTTL: 19 })
 
 let apiHits = 0;
 const request = async (ws) => {
@@ -76,7 +77,7 @@ wss.on('connection', (ws) => {
     ws.on('error', console.error);
     console.log('Client connected!');
     request(ws);
-    setInterval(() => request(ws), 10000);
+    setInterval(() => request(ws), 20000);
     ws.on('disconnect', () => {
         console.log('Client disconnected!');
         client.quit();
