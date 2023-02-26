@@ -6,6 +6,7 @@ function App() {
 
   useEffect(() => {
 
+    //initialize WebSocket connection to server
     const ws = new WebSocket("ws://localhost:8800");
     ws.onerror = () => console.error;
     ws.onopen = () => console.log("WebSocket connection established!");
@@ -27,7 +28,8 @@ function App() {
       <Title>Cryptocurrency Realtime Price</Title>
 
       {
-        data == null ? "Loading..." 
+        data == null 
+        ? "Loading..." 
         : 
         <CardContainer>
           {data.map((item) => {
