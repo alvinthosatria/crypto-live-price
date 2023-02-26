@@ -2,8 +2,8 @@ import express from 'express';
 import http from 'http';
 import { WebSocketServer } from 'ws';
 import * as dotenv from 'dotenv';
-import * as redis from 'redis';
 import fetch from 'node-fetch';
+import NodeCache from 'node-cache';
 
 dotenv.config();
 
@@ -14,14 +14,18 @@ const apiKey = process.env.API_KEY;
 app.use(express.json());
 
 const httpServer = http.createServer(app);
-const wss = new WebSocketServer({server: httpServer});
+const wss = new WebSocketServer({
+  server: httpServer,
 
-const client = redis.createClient({
-    host: "localhost",
-    port: 6379
+  //handshake connection with NGINX proxy server
+  verifyClient: (info, cb) => {
+    const forwardedFor = info.req.headers['x-forwarded-for'];
+    if (forwardedFor) {
+      info.req.remoteAddress = forwardedFor.split(',')[0];
+    }
+    cb(true);
+  }
 });
-
-client.connect();
 
 const requestOptions = {
   method: 'GET',
@@ -32,41 +36,37 @@ const requestOptions = {
   }
 };
 
+// Create a new cache object with a  10 seconds expiration time
+const cache = new NodeCache({ stdTTL: 10 })
+
 let apiHits = 0;
 const request = async (ws) => {
   try {
-    console.log("hello")
-    client.get('crypto_data', async (err, cachedData) => {
-        if (cachedData) {
-            console.log('Serving cached data');
-            ws.send(cachedData);
-            return;
-        }
-
-        const res = await fetch('https://api.coincap.io/v2/assets?limit=10', requestOptions);
-        if (res.status !== 200) throw new Error(`Failed to fetch data. Status code: ${res.status}`);
-        apiHits++;
-        console.log(apiHits);
-        const data = await res.json();
-        const info = data.data.map((item) => {
-            let priceUsd = parseFloat(item.priceUsd).toFixed(8).toString();
-            let volumeUsd = parseFloat(item.volumeUsd24Hr).toFixed(8).toString();
-            let changePercent = parseFloat(item.changePercent24Hr).toFixed(8).toString();
-            return {
-                id: item.id,
-                name: item.name,
-                price: priceUsd,
-                volume: volumeUsd,
-                change: changePercent,
-            };
-        });
-
-        client.set('crypto_data', JSON.stringify(info), 'EX', 20, (err, reply) => {
-        console.log(`Redis cache set with reply: ${reply}`);
+    const cachedData = cache.get("crypto_data");
+    if (cachedData) {
+      console.log("Serving cached data");
+      ws.send(JSON.stringify(cachedData));
+      return;
+    }
+    const res = await fetch('https://api.coincap.io/v2/assets?limit=10', requestOptions);
+    if (res.status !== 200) throw new Error(`Failed to fetch data. Status code: ${res.status}`);
+    apiHits++;
+    console.log(apiHits);
+    const data = await res.json();
+    const info = data.data.map((item) => {
+        let priceUsd = parseFloat(item.priceUsd).toFixed(8).toString();
+        let volumeUsd = parseFloat(item.volumeUsd24Hr).toFixed(8).toString();
+        let changePercent = parseFloat(item.changePercent24Hr).toFixed(8).toString();
+        return {
+            id: item.id,
+            name: item.name,
+            price: priceUsd,
+            volume: volumeUsd,
+            change: changePercent,
+        };
     });
-
+    cache.set("crypto_data", info);
     ws.send(JSON.stringify(info));
-    });
   } catch (error) {
     console.error(error);
   }
@@ -76,7 +76,7 @@ wss.on('connection', (ws) => {
     ws.on('error', console.error);
     console.log('Client connected!');
     request(ws);
-    setInterval(() => request(ws), 20000);
+    setInterval(() => request(ws), 10000);
     ws.on('disconnect', () => {
         console.log('Client disconnected!');
         client.quit();
@@ -85,9 +85,5 @@ wss.on('connection', (ws) => {
 
 
 httpServer.listen(8800, () => {
-  console.log('Server running!')
-});
-
-client.on('error', (error) => {
-    console.error('Redis client error:', error);
+  console.log('Server is running!')
 });

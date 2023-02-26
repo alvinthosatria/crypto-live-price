@@ -6,8 +6,8 @@ function App() {
 
   useEffect(() => {
 
-    //initialize WebSocket connection to server
-    const ws = new WebSocket("ws://localhost:8800");
+    //initialize WebSocket connection to NGINX server, load balancing based on least connection
+    const ws = new WebSocket("ws://localhost:81");
     ws.onerror = () => console.error;
     ws.onopen = () => console.log("WebSocket connection established!");
     
