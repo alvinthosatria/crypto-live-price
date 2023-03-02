@@ -6,7 +6,6 @@ function App() {
   const [data, setData] = useState();
 
   useEffect(() => {
-
     //initialize WebSocket connection
     //PORT 8800 for the NodeJS server, PORT 80 for the NGINX reverse proxy server
     const ws = new WebSocket("ws://localhost:8800");

@@ -1,5 +1,5 @@
 FROM node
-WORKDIR /app
+WORKDIR /client
 COPY package.json .
 RUN npm i
 COPY . .

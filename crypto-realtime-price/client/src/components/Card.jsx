@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from 'styled-components';
 
-const Card = ({item}) => {
+const Card = ({ item }) => {
   return (
     <Container>
         <Cryptocurrency>{item.name}</Cryptocurrency>
