@@ -8,13 +8,13 @@ Front-end developed with:
 Back-end developed with:  
 -NodeJS and ExpressJS  
 
-Minimized API call with node caching and attempt to create Nginx reverse proxy server for load balancing.  
-Dockerfile made for frontend, backend and nginx config.  
+Minimized API call with Redis caching and attempt to create Nginx reverse proxy server for load balancing.  
+Dockerfile made for frontend, backend and nginx config.
 
 System design  
-Client <--WebSocket--> Backend <--API CALL  
+Client <--WebSocket--> Backend <--CACHE HIT--> Redis cache <--CACHE MISS--> API endpoint
 
 System design with NGINX (improve concurrent handling of users)  
-Client <--WebSocket--> Proxy server <--WebSocket--> Backend <--API CALL  
+Client <--WebSocket--> Proxy server <--WebSocket--> Backend <--CACHE HIT--> Redis cache <--CACHE MISS--> API endpoint
 
-Proxy server is configured to do load balancing based on least connections.  
+Proxy server is configured to do load balancing based on least connections.
