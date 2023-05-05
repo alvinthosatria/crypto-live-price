@@ -14,7 +14,6 @@ const PORT2 = process.env.PORT_TWO;
 const DEFAULT_EXPIRATION = 19;
 
 
-
 //middleware
 app.use(express.json());
 const redisClient  = createClient();
@@ -51,9 +50,32 @@ const requestOptions = {
   }
 };
 
-// Create a new cache object with a 19 seconds expiration time because
-// data from CoinCap API is updated every 20 seconds
-//const cache = new NodeCache({ stdTTL: 19 })
+let priceUsd;
+let volumeUsd;
+let changePercent;
+
+const convertItem = (item) => {
+  priceUsd = parseFloat(item.priceUsd).toFixed(8).toString();
+  volumeUsd = parseFloat(item.volumeUsd24Hr).toFixed(8).toString();
+  changePercent = parseFloat(item.changePercent24Hr).toFixed(8).toString();
+}
+
+const fetchCryptoData = async () => {
+  const res = await fetch('https://api.coincap.io/v2/assets?limit=10', requestOptions);
+  if (res.status !== 200) throw new Error(`Failed to fetch data. Status code: ${res.status}`);
+  const data = await res.json();
+  const info = data.data.map((item) => {
+    convertItem(item);
+    return { 
+        id: item.id,
+        name: item.name,
+        price: priceUsd,
+        volume: volumeUsd,
+        change: changePercent,
+    };
+  });
+  return info;
+};
 
 let apiHits = 0;
 const request = async (ws) => {
@@ -62,29 +84,16 @@ const request = async (ws) => {
 
     if (redisCachedData != null) {
       console.log("Serving redis cached data");
-      console.log(redisCachedData);
       ws.send(redisCachedData);
       return;
     }
 
-    const res = await fetch('https://api.coincap.io/v2/assets?limit=10', requestOptions);
-    if (res.status !== 200) throw new Error(`Failed to fetch data. Status code: ${res.status}`);
+    const info = await fetchCryptoData();
     apiHits++;
     console.log(apiHits);
-    const data = await res.json();
-    const info = data.data.map((item) => {
-      let priceUsd = parseFloat(item.priceUsd).toFixed(8).toString();
-      let volumeUsd = parseFloat(item.volumeUsd24Hr).toFixed(8).toString();
-      let changePercent = parseFloat(item.changePercent24Hr).toFixed(8).toString();
-      return { 
-          id: item.id,
-          name: item.name,
-          price: priceUsd,
-          volume: volumeUsd,
-          change: changePercent,
-      };
-    });
 
+    // Create a new cache object with a 19 seconds expiration time because
+    // data from CoinCap API is updated every 20 seconds
     await redisClient.setEx('crypto_data', DEFAULT_EXPIRATION, JSON.stringify(info));
 
     ws.send(JSON.stringify(info));
