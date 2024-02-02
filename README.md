@@ -1,6 +1,8 @@
 # crypto-realtime-price
 App developed with data fetched from CoinCap API 2.0 https://docs.coincap.io/
 
+![image](https://github.com/alvinthosatria/crypto-realtime-price/assets/89440444/f2607f8d-4528-44c9-b83c-47abbc26a6db)
+
 Front-end developed with:  
 -ReactJS + Vite  
 -Styled-components CSS  
